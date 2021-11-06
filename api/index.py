@@ -2,6 +2,7 @@ from flask import Flask, redirect, request
 
 import fnmatch
 import itertools
+import os
 import requests
 
 app = Flask(__name__)
@@ -9,25 +10,32 @@ app = Flask(__name__)
 
 @app.route('/api')
 def view_func():
-    params = request.args
+    args = request.args
+    headers = request.headers
 
-    if 'repo' in params:
-        repo = params.get('repo')
+    if 'repo' in args:
+        repo = args.get('repo')
         if not '/' in repo:
             repo = 'inaccel/' + repo
 
-        if 'tag' in params:
+        if 'tag' in args:
             for page in itertools.count(1):
                 response = requests.get(
                     'https://api.github.com/repos/{}/releases?page={}&per_page=100'
-                    .format(repo, page))
+                    .format(repo, page),
+                    headers={
+                        'Authorization':
+                        headers.get(
+                            'Authorization',
+                            'token {}'.format(os.getenv('GITHUB_TOKEN')))
+                    })
 
                 if response.status_code != 200:
                     return '', response.status_code
                 elif response.json():
                     for release in response.json():
                         if fnmatch.fnmatch(release['tag_name'],
-                                           params.get('tag')):
+                                           args.get('tag')):
                             break
                     else:
                         continue
@@ -36,7 +44,12 @@ def view_func():
                     return '', 404  # Not Found
         else:
             response = requests.get(
-                'https://api.github.com/repos/{}/releases/latest'.format(repo))
+                'https://api.github.com/repos/{}/releases/latest'.format(repo),
+                headers={
+                    'Authorization':
+                    headers.get('Authorization',
+                                'token {}'.format(os.getenv('GITHUB_TOKEN')))
+                })
 
             if response.status_code != 200:
                 return '', response.status_code
@@ -45,13 +58,13 @@ def view_func():
             else:
                 return '', 404  # Not Found
 
-        if 'asset' in params:
+        if 'asset' in args:
             for asset in release['assets']:
-                if asset['name'] == params.get('asset'):
+                if asset['name'] == args.get('asset'):
                     return redirect(asset['browser_download_url'])
-        elif 'zip' in params:
+        elif 'zip' in args:
             return redirect(release['zipball_url'])
-        elif 'tar' in params:
+        elif 'tar' in args:
             return redirect(release['tarball_url'])
         elif release['assets']:
             return redirect(release['assets'][0]['browser_download_url'])
