@@ -18,6 +18,11 @@ def view_func():
         if not '/' in repo:
             repo = 'inaccel/' + repo
 
+        if repo.startswith('inaccel/'):
+            authorization = 'token {}'.format(os.getenv('GITHUB_TOKEN'))
+        else:
+            authorization = None
+
         if 'tag' in args:
             for page in itertools.count(1):
                 response = requests.get(
@@ -25,9 +30,7 @@ def view_func():
                     .format(repo, page),
                     headers={
                         'Authorization':
-                        headers.get(
-                            'Authorization',
-                            'token {}'.format(os.getenv('GITHUB_TOKEN')))
+                        headers.get('Authorization', authorization)
                     })
 
                 if response.status_code != 200:
@@ -46,9 +49,8 @@ def view_func():
             response = requests.get(
                 'https://api.github.com/repos/{}/releases/latest'.format(repo),
                 headers={
-                    'Authorization':
-                    headers.get('Authorization',
-                                'token {}'.format(os.getenv('GITHUB_TOKEN')))
+                    'Authorization': headers.get('Authorization',
+                                                 authorization)
                 })
 
             if response.status_code != 200:
