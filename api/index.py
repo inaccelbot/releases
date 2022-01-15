@@ -7,6 +7,9 @@ import requests
 
 app = Flask(__name__)
 
+actor = os.getenv('GITHUB_ACTOR')
+token = os.getenv('GITHUB_TOKEN')
+
 
 @app.route('/api')
 def view_func():
@@ -16,10 +19,10 @@ def view_func():
     if 'repo' in args:
         repo = args.get('repo')
         if not '/' in repo:
-            repo = 'inaccel/' + repo
+            repo = '{}/{}'.format(actor, repo)
 
-        if repo.startswith('inaccel/'):
-            authorization = 'token {}'.format(os.getenv('GITHUB_TOKEN'))
+        if repo.startswith('{}/'.format(actor)):
+            authorization = 'token {}'.format(token)
         else:
             authorization = None
 
